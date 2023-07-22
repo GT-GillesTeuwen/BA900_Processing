@@ -77,6 +77,7 @@ public class BA900Record {
                 }
             }
         }
+        file.close();
         return allTables;
     }
 }
