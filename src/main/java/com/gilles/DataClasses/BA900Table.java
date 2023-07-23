@@ -8,17 +8,56 @@ import com.gilles.Exceptions.InvalidRecordException;
 
 public class BA900Table {
     private String tableName;
+    private BA900Record record;
     private String[] columns;
     private ArrayList<String[]> records;
 
-    public BA900Table(String tableName, String... cols) {
+    public BA900Table(String tableName, BA900Record record, String... cols) {
+        this.record = record;
         this.tableName = tableName;
         columns = new String[cols.length];
         for (int i = 0; i < cols.length; i++) {
-            columns[i] = cols[i];
+            columns[i] = cols[i].replace("\"", "").toLowerCase();
         }
         records = new ArrayList<>();
 
+    }
+
+    public String getValueBasedOnDescAndCol(String desc, String col) {
+        int columnIndex = -1;
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i].equals(col)) {
+                columnIndex = i;
+                break;
+            }
+        }
+
+        int rowIndex = -1;
+        for (int i = 0; i < records.size(); i++) {
+            if (records.get(i)[0].equals(desc)) {
+                rowIndex = i;
+                break;
+            }
+        }
+        if (columnIndex == -1 || rowIndex == -1) {
+            return "Value not found in " + record.getRecordDate() + " " + record.getPath() + "\n" + "Either " + desc
+                    + " or " + col + " is not in this table";
+        }
+
+        return records.get(rowIndex)[columnIndex];
+    }
+
+    public String getCol0ofRow(int row) {
+        return records.get(row)[0];
+    }
+
+    public String getColumnName(int col) {
+        return columns[col];
+    }
+
+    // This assumes that all tablesN's have the same number of rows and cols
+    public String getValueBasedOnIndexLikeANormalPerson(int row, int col) {
+        return records.get(row)[col];
     }
 
     public String getTableName() {

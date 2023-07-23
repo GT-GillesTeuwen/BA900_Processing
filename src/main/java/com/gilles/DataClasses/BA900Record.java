@@ -38,6 +38,14 @@ public class BA900Record {
         return "Institution:" + institution + "\tDate:" + recordDate.toString();
     }
 
+    public String getPath() {
+        return path;
+    }
+
+    public YearMonth getRecordDate() {
+        return recordDate;
+    }
+
     public Set<BA900Table> getTables() throws IOException {
         Set<BA900Table> allTables = new HashSet<>();
         Scanner file = new Scanner(new FileReader(path));
@@ -47,6 +55,7 @@ public class BA900Record {
                 cur = file.nextLine();
             }
             String tableName = cur;
+            tableName = tableName.replaceAll(",", "");
             String headings = file.nextLine();
             if (headings.charAt(headings.length() - 1) == ',') {
                 headings = headings.substring(0, headings.length() - 1);
@@ -57,7 +66,7 @@ public class BA900Record {
             if (cur.charAt(cur.length() - 1) == ',') {
                 cur = cur.substring(0, cur.length() - 1);
             }
-            BA900Table currentTable = new BA900Table(tableName, columns);
+            BA900Table currentTable = new BA900Table(tableName, this, columns);
             allTables.add(currentTable);
             while (file.hasNext() && !cur.startsWith("Table")) {
                 Reader in = new StringReader(cur);
