@@ -57,6 +57,9 @@ public class BA900Table {
 
     // This assumes that all tablesN's have the same number of rows and cols
     public String getValueBasedOnIndexLikeANormalPerson(int row, int col) {
+        if (records.size() > row - 1 || records.get(row).length > col - 1) {
+            return "NO VALUE (Out of Bounds)";
+        }
         return records.get(row)[col];
     }
 
