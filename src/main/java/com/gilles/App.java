@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -82,6 +83,7 @@ public class App {
         JButton clearBtn = new JButton("Clear");
         JTextField csvName = new JTextField("");
         csvName.setPreferredSize(new Dimension(100, 25));
+        JCheckBox useRawColInt = new JCheckBox("Use Raw Col Int");
         JButton buildCSV = new JButton("Build CSV");
         tabPane = tabs;
         p.add(comboBox);
@@ -91,6 +93,7 @@ public class App {
         p.add(new JScrollPane(selectedCells));
         p.add(clearBtn);
         p.add(csvName);
+        p.add(useRawColInt);
         p.add(buildCSV);
         cont.add(p);
         cont.setSize(300, 400);
@@ -111,7 +114,7 @@ public class App {
         });
         buildCSV.addActionListener(e -> {
             try {
-                doSCV(csvName.getText(), d);
+                doSCV(csvName.getText(), d, selectedCells, useRawColInt);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
@@ -172,7 +175,8 @@ public class App {
         }
     }
 
-    private static void doSCV(String tableName, DataStore d) throws IOException {
+    private static void doSCV(String tableName, DataStore d, JTable selectedCells, JCheckBox rawCol)
+            throws IOException {
         for (String bankName : d.getAllRecords().keySet()) {
             ArrayList<String> csvColumns = new ArrayList<>();
             csvColumns.add("year-month");
@@ -182,6 +186,10 @@ public class App {
             CSVWriter writer = new CSVWriter(csvColumns);
             HashMap<YearMonth, BA900Record> currentBank = d.getAllRecords().get(bankName);
             for (YearMonth yearMonth : currentBank.keySet()) {
+                if (yearMonth == null) {
+                    break;
+                }
+
                 BA900Record currentRecord = currentBank.get(yearMonth);
                 String[] newRecordForCSV = new String[csvColumns.size()];
                 newRecordForCSV[0] = yearMonth.toString();
@@ -189,11 +197,19 @@ public class App {
                     BA900Table currentTable = currentRecord.getTables().get(tableNamesToFind.get(i));
                     int currentRow = rows.get(i);
                     int currentCol = cols.get(i);
+                    String subString = selectedCells.getValueAt(i, 4).toString();
+                    // System.out.println(subString);
                     if (currentTable == null) {
-                        newRecordForCSV[i + 1] = "NOVALUEFOUND";
+                        newRecordForCSV[i + 1] = "NO VALUE FOUND, Table did not exist";
                     } else {
-                        newRecordForCSV[i + 1] = currentTable.getValueBasedOnIndexLikeANormalPerson(currentRow,
-                                currentCol);
+                        if (rawCol.isSelected()) {
+                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnIndexLikeANormalPerson(currentRow,
+                                    currentCol);
+                        } else {
+                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnRowIndexAndColumnContains(currentRow,
+                                    subString);
+                        }
+
                     }
                 }
                 writer.addRecord(newRecordForCSV);

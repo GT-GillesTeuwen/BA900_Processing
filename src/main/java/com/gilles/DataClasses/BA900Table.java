@@ -58,9 +58,31 @@ public class BA900Table {
     // This assumes that all tablesN's have the same number of rows and cols
     public String getValueBasedOnIndexLikeANormalPerson(int row, int col) {
         if (records.size() > row - 1 || records.get(row).length > col - 1) {
+            System.out.println(tableName + " for " + record + " does not have " + row + " " + col);
             return "NO VALUE (Out of Bounds)";
         }
         return records.get(row)[col];
+    }
+
+    public String getValueBasedOnRowIndexAndColumnContains(int row, String subString) {
+        if (records.size() < row - 1) {
+            System.out.println(tableName + " " + record.toString() + " row was " + row + " sub was " + subString);
+            return "NO VALUE (Row out of Bounds" + row + ")";
+        }
+        int col = getColIndexOfFirstContains(subString);
+        if (col == -1) {
+            return "NO VALUE (Column not found)";
+        }
+        return records.get(row)[col];
+    }
+
+    private int getColIndexOfFirstContains(String subString) {
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i].contains(subString)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public String getTableName() {
