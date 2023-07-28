@@ -2,6 +2,8 @@ package com.gilles.Util;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class CSVWriter {
@@ -17,8 +19,12 @@ public class CSVWriter {
         records.add(rec);
     }
 
-    public void write(String bank) {
+    public void write(String bank) throws IOException {
+        bank = bank.replaceAll(" ", "_");
+        bank = bank.replaceAll("\\*", "");
+        Files.createDirectories(Paths.get(bank.split("/")[0]));
         try {
+            System.out.println(bank);
             FileWriter writer = new FileWriter(bank + ".csv", false);
             String out = "";
             for (int i = 0; i < cols.length; i++) {
@@ -37,8 +43,8 @@ public class CSVWriter {
                 }
                 out += "\n";
             }
-            writer.write(out);
-            writer.flush();
+            // writer.write(out);
+            // writer.flush();
 
         } catch (IOException e) {
             e.printStackTrace();

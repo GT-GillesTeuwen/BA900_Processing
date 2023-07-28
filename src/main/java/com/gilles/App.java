@@ -5,6 +5,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.IOException;
+import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -109,27 +110,38 @@ public class App {
                     System.out.println(tab.getValueBasedOnDescAndCol(desc, columnName));
                     HashMap<String, HashMap<YearMonth, BA900Record>> innerMap = d.getAllRecords();
                     HashMap<YearMonth, BA900Record> innerBank = innerMap.get(c.getSelectedItem().toString());
-                    String[] csvCols = { "yearMonth", columnName, "Description in table", "Column in table" };
-                    CSVWriter w = new CSVWriter(csvCols);
-                    for (BA900Record recordFromMassPrint : innerBank.values()) {
 
-                        try {
-                            for (BA900Table tableInBank : recordFromMassPrint.getTables()) {
-                                if (tableInBank.getTableName().equals(tab.getTableName())) {
-                                    // System.out.println(tableInBank.getValueBasedOnDescAndCol(desc, columnName));
-                                    System.out.println(tableInBank.getValueBasedOnIndexLikeANormalPerson(row, col));
-                                    String[] toAdd = { recordFromMassPrint.getRecordDate().toString(),
-                                            tableInBank.getValueBasedOnIndexLikeANormalPerson(row, col),
-                                            tableInBank.getCol0ofRow(row), tableInBank.getColumnName(col) };
-                                    w.addRecord(toAdd);
+                    String[] csvCols = { "yearMonth", columnName, "Description in table", "Column in table" };
+                    String append = "";
+                    for (String name : innerMap.keySet()) {
+                        HashMap<YearMonth, BA900Record> aBank = innerMap.get(name);
+                        CSVWriter w = new CSVWriter(csvCols);
+                        for (BA900Record recordFromMassPrint : aBank.values()) {
+
+                            try {
+                                for (BA900Table tableInBank : recordFromMassPrint.getTables()) {
+                                    if (tableInBank.getTableName().equals(tab.getTableName())) {
+                                        // System.out.println(tableInBank.getValueBasedOnDescAndCol(desc, columnName));
+                                        // System.out.println(tableInBank.getValueBasedOnIndexLikeANormalPerson(row,
+                                        // col));
+                                        String[] toAdd = { recordFromMassPrint.getRecordDate().toString(),
+                                                tableInBank.getValueBasedOnIndexLikeANormalPerson(row, col),
+                                                tableInBank.getCol0ofRow(row), tableInBank.getColumnName(col) };
+                                        w.addRecord(toAdd);
+                                    }
                                 }
+                            } catch (IOException e1) {
+                                // TODO Auto-generated catch block
+                                e1.printStackTrace();
                             }
+                        }
+                        try {
+                            w.write(name + "/" + name + "_" + desc + "_" + columnName);
                         } catch (IOException e1) {
                             // TODO Auto-generated catch block
                             e1.printStackTrace();
                         }
                     }
-                    w.write(c.getSelectedItem().toString());
                 }
             });
             BA900TablePane sp = new BA900TablePane(jt, jt);
