@@ -46,8 +46,8 @@ public class BA900Record {
         return recordDate;
     }
 
-    public Set<BA900Table> getTables() throws IOException {
-        Set<BA900Table> allTables = new HashSet<>();
+    public HashMap<String, BA900Table> getTables() throws IOException {
+        HashMap<String, BA900Table> allTables = new HashMap<>();
         Scanner file = new Scanner(new FileReader(path));
         String cur = "";
         while (file.hasNext()) {
@@ -67,7 +67,7 @@ public class BA900Record {
                 cur = cur.substring(0, cur.length() - 1);
             }
             BA900Table currentTable = new BA900Table(tableName, this, columns);
-            allTables.add(currentTable);
+            allTables.put(tableName, currentTable);
             while (file.hasNext() && !cur.startsWith("Table")) {
                 Reader in = new StringReader(cur);
                 for (CSVRecord row : CSVFormat.DEFAULT.parse(in)) {

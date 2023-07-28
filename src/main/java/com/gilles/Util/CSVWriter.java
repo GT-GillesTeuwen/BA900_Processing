@@ -7,10 +7,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class CSVWriter {
-    String[] cols;
+    ArrayList<String> cols;
     ArrayList<String[]> records;
 
-    public CSVWriter(String[] cols) {
+    public CSVWriter(ArrayList<String> cols) {
         this.cols = cols;
         records = new ArrayList<>();
     }
@@ -27,24 +27,24 @@ public class CSVWriter {
             System.out.println(bank);
             FileWriter writer = new FileWriter(bank + ".csv", false);
             String out = "";
-            for (int i = 0; i < cols.length; i++) {
-                out += cols[i];
-                if (i < cols.length - 1) {
+            for (int i = 0; i < cols.size(); i++) {
+                out += cols.get(i).replaceAll(",", "_");
+                if (i < cols.size() - 1) {
                     out += ",";
                 }
             }
             out += "\n";
             for (String[] record : records) {
                 for (int i = 0; i < record.length; i++) {
-                    out += record[i];
+                    out += record[i].replaceAll(",", "_");
                     if (i < record.length - 1) {
                         out += ",";
                     }
                 }
                 out += "\n";
             }
-            // writer.write(out);
-            // writer.flush();
+            writer.write(out);
+            writer.flush();
 
         } catch (IOException e) {
             e.printStackTrace();

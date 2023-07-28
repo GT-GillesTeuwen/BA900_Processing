@@ -19,6 +19,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
 import javax.xml.crypto.Data;
 
 import com.gilles.Core.DataStore;
@@ -34,8 +35,18 @@ import com.gilles.Util.CSVWriter;
 public class App {
 
     private static JTabbedPane tabPane;
+    static ArrayList<String> tableNamesToFind;
+    static ArrayList<Integer> rows;
+    static ArrayList<Integer> cols;
+    static ArrayList<String> descriptions;
+    static ArrayList<String> columnNames;
 
     public static void main(String[] args) {
+        tableNamesToFind = new ArrayList<>();
+        rows = new ArrayList<>();
+        cols = new ArrayList<>();
+        descriptions = new ArrayList<>();
+        columnNames = new ArrayList<>();
         JFrame ld = new JFrame("Loading");
         JProgressBar progressBar = new JProgressBar();
         progressBar.setIndeterminate(true);
@@ -66,11 +77,21 @@ public class App {
         month.setPreferredSize(new Dimension(100, 25));
         JButton b = new JButton("Go");
         JTabbedPane tabs = new JTabbedPane();
+        String[] cols = { "Table Name", "Row", "Col", "RowDesc", "ColName" };
+        JTable selectedCells = new JTable(new DefaultTableModel(cols, 0));
+        JButton clearBtn = new JButton("Clear");
+        JTextField csvName = new JTextField("");
+        csvName.setPreferredSize(new Dimension(100, 25));
+        JButton buildCSV = new JButton("Build CSV");
         tabPane = tabs;
         p.add(comboBox);
         p.add(year);
         p.add(month);
         p.add(b);
+        p.add(new JScrollPane(selectedCells));
+        p.add(clearBtn);
+        p.add(csvName);
+        p.add(buildCSV);
         cont.add(p);
         cont.setSize(300, 400);
         cont.setVisible(true);
@@ -79,7 +100,18 @@ public class App {
         frame.setVisible(true);
         b.addActionListener(e -> {
             try {
-                selectionButtonPressed(year, month, comboBox, d, frame, tabs);
+                selectionButtonPressed(year, month, comboBox, d, frame, tabs, selectedCells);
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+        });
+        clearBtn.addActionListener(e -> {
+            clearSelectedCells(selectedCells);
+        });
+        buildCSV.addActionListener(e -> {
+            try {
+                doSCV(csvName.getText(), d);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
@@ -88,8 +120,22 @@ public class App {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
+    private static void clearSelectedCells(JTable selectedCells) {
+        DefaultTableModel dm = (DefaultTableModel) selectedCells.getModel();
+        int rowCount = dm.getRowCount();
+        // Remove rows one by one from the end of the table
+        for (int i = rowCount - 1; i >= 0; i--) {
+            dm.removeRow(i);
+        }
+        tableNamesToFind.clear();
+        rows.clear();
+        cols.clear();
+        descriptions.clear();
+        columnNames.clear();
+    }
+
     private static void selectionButtonPressed(JComboBox y, JComboBox m, JComboBox c, DataStore d, JFrame frame,
-            JTabbedPane tabs) throws IOException {
+            JTabbedPane tabs, JTable selectedCells) throws IOException {
         System.gc();
         tabs.removeAll();
         HashMap<String, HashMap<YearMonth, BA900Record>> map = d.getAllRecords();
@@ -98,7 +144,7 @@ public class App {
                 .get(YearMonth.of((Integer) (y.getSelectedItem()), (Integer) (m.getSelectedItem())));
 
         frame.add(tabs);
-        for (BA900Table tab : record.getTables()) {
+        for (BA900Table tab : record.getTables().values()) {
             JTable jt = new JTable(tab.getRecordsAs2dArray(), tab.getColumns());
             jt.addMouseListener(new MouseAdapter() {
                 public void mouseClicked(MouseEvent e) {
@@ -108,45 +154,51 @@ public class App {
                     String columnName = tab.getColumns()[col];
                     String desc = jt.getValueAt(row, 0).toString();
                     System.out.println(tab.getValueBasedOnDescAndCol(desc, columnName));
-                    HashMap<String, HashMap<YearMonth, BA900Record>> innerMap = d.getAllRecords();
-                    HashMap<YearMonth, BA900Record> innerBank = innerMap.get(c.getSelectedItem().toString());
 
-                    String[] csvCols = { "yearMonth", columnName, "Description in table", "Column in table" };
-                    String append = "";
-                    for (String name : innerMap.keySet()) {
-                        HashMap<YearMonth, BA900Record> aBank = innerMap.get(name);
-                        CSVWriter w = new CSVWriter(csvCols);
-                        for (BA900Record recordFromMassPrint : aBank.values()) {
+                    tableNamesToFind.add(tab.getTableName());
+                    rows.add(row);
+                    cols.add(col);
+                    descriptions.add(desc);
+                    columnNames.add(columnName);
 
-                            try {
-                                for (BA900Table tableInBank : recordFromMassPrint.getTables()) {
-                                    if (tableInBank.getTableName().equals(tab.getTableName())) {
-                                        // System.out.println(tableInBank.getValueBasedOnDescAndCol(desc, columnName));
-                                        // System.out.println(tableInBank.getValueBasedOnIndexLikeANormalPerson(row,
-                                        // col));
-                                        String[] toAdd = { recordFromMassPrint.getRecordDate().toString(),
-                                                tableInBank.getValueBasedOnIndexLikeANormalPerson(row, col),
-                                                tableInBank.getCol0ofRow(row), tableInBank.getColumnName(col) };
-                                        w.addRecord(toAdd);
-                                    }
-                                }
-                            } catch (IOException e1) {
-                                // TODO Auto-generated catch block
-                                e1.printStackTrace();
-                            }
-                        }
-                        try {
-                            w.write(name + "/" + name + "_" + desc + "_" + columnName);
-                        } catch (IOException e1) {
-                            // TODO Auto-generated catch block
-                            e1.printStackTrace();
-                        }
-                    }
+                    DefaultTableModel model = (DefaultTableModel) selectedCells.getModel();
+                    model.addRow(new Object[] { tab.getTableName(), row, col, desc, columnName });
+
                 }
             });
             BA900TablePane sp = new BA900TablePane(jt, jt);
             tabs.add(tab.getTableName(), sp);
 
+        }
+    }
+
+    private static void doSCV(String tableName, DataStore d) throws IOException {
+        for (String bankName : d.getAllRecords().keySet()) {
+            ArrayList<String> csvColumns = new ArrayList<>();
+            csvColumns.add("year-month");
+            for (int i = 0; i < cols.size(); i++) {
+                csvColumns.add(descriptions.get(i) + "-" + columnNames.get(i));
+            }
+            CSVWriter writer = new CSVWriter(csvColumns);
+            HashMap<YearMonth, BA900Record> currentBank = d.getAllRecords().get(bankName);
+            for (YearMonth yearMonth : currentBank.keySet()) {
+                BA900Record currentRecord = currentBank.get(yearMonth);
+                String[] newRecordForCSV = new String[csvColumns.size()];
+                newRecordForCSV[0] = yearMonth.toString();
+                for (int i = 0; i < tableNamesToFind.size(); i++) {
+                    BA900Table currentTable = currentRecord.getTables().get(tableNamesToFind.get(i));
+                    int currentRow = rows.get(i);
+                    int currentCol = cols.get(i);
+                    if (currentTable == null) {
+                        newRecordForCSV[i + 1] = "NOVALUEFOUND";
+                    } else {
+                        newRecordForCSV[i + 1] = currentTable.getValueBasedOnIndexLikeANormalPerson(currentRow,
+                                currentCol);
+                    }
+                }
+                writer.addRecord(newRecordForCSV);
+            }
+            writer.write(bankName + "/" + bankName + "-" + tableName);
         }
     }
 
