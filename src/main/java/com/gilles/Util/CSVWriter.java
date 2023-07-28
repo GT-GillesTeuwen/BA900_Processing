@@ -20,12 +20,13 @@ public class CSVWriter {
     }
 
     public void write(String bank) throws IOException {
+        Files.createDirectories(Paths.get("Results"));
         bank = bank.replaceAll(" ", "_");
         bank = bank.replaceAll("\\*", "");
-        Files.createDirectories(Paths.get(bank.split("/")[0]));
+        Files.createDirectories(Paths.get("Results/" + bank.split("/")[0]));
         try {
             System.out.println(bank);
-            FileWriter writer = new FileWriter(bank + ".csv", false);
+            FileWriter writer = new FileWriter("Results/" + bank + ".csv", false);
             String out = "";
             for (int i = 0; i < cols.size(); i++) {
                 out += cols.get(i).replaceAll(",", "_");
