@@ -59,7 +59,7 @@ public class BA900Table {
     public String getValueBasedOnIndexLikeANormalPerson(int row, int col) {
         if (records.size() > row - 1 || records.get(row).length > col - 1) {
             System.out.println(tableName + " for " + record + " does not have " + row + " " + col);
-            return "NO VALUE (Out of Bounds)";
+            return "NO VALUE (Out of Bounds for[" + row + "," + col + "])";
         }
         return records.get(row)[col];
     }
