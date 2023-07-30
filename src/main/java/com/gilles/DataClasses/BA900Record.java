@@ -49,27 +49,38 @@ public class BA900Record {
     public HashMap<String, BA900Table> getTables() throws IOException {
         HashMap<String, BA900Table> allTables = new HashMap<>();
         Scanner file = new Scanner(new FileReader(path));
-        String cur = "";
+        String currentLineOfTheFile = "";
         while (file.hasNext()) {
-            while (file.hasNext() && !cur.startsWith("Table")) {
-                cur = file.nextLine();
+
+            // Find the next table
+            while (file.hasNext() && !currentLineOfTheFile.startsWith("Table")) {
+                currentLineOfTheFile = file.nextLine();
             }
-            String tableName = cur;
+            String tableName = currentLineOfTheFile;
             tableName = tableName.replaceAll(",", "");
             String headings = file.nextLine();
+
+            // Get the headings of the table
             if (headings.charAt(headings.length() - 1) == ',') {
                 headings = headings.substring(0, headings.length() - 1);
             }
+
+            // Building the columns array
             String[] columns = headings.split(",");
 
-            cur = file.nextLine();
-            if (cur.charAt(cur.length() - 1) == ',') {
-                cur = cur.substring(0, cur.length() - 1);
+            // Get first line after headings
+            currentLineOfTheFile = file.nextLine();
+            if (currentLineOfTheFile.charAt(currentLineOfTheFile.length() - 1) == ','
+                    && countChar(currentLineOfTheFile, ',') > columns.length - 1) {
+                currentLineOfTheFile = currentLineOfTheFile.substring(0, currentLineOfTheFile.length() - 1);
             }
             BA900Table currentTable = new BA900Table(tableName, this, columns);
             allTables.put(tableName, currentTable);
-            while (file.hasNext() && !cur.startsWith("Table")) {
-                Reader in = new StringReader(cur);
+
+            // Reading in the data (keep looping until another table is found or the file
+            // ends)
+            while (file.hasNext() && !currentLineOfTheFile.startsWith("Table")) {
+                Reader in = new StringReader(currentLineOfTheFile);
                 for (CSVRecord row : CSVFormat.DEFAULT.parse(in)) {
                     try {
                         currentTable.addRecord(row);
@@ -80,13 +91,24 @@ public class BA900Record {
                     }
                 }
                 in.close();
-                cur = file.nextLine();
-                if (cur.charAt(cur.length() - 1) == ',') {
-                    cur = cur.substring(0, cur.length() - 1);
+                currentLineOfTheFile = file.nextLine();
+                if (currentLineOfTheFile.charAt(currentLineOfTheFile.length() - 1) == ','
+                        && countChar(currentLineOfTheFile, ',') > columns.length - 1) {
+                    currentLineOfTheFile = currentLineOfTheFile.substring(0, currentLineOfTheFile.length() - 1);
                 }
             }
         }
         file.close();
         return allTables;
+    }
+
+    private int countChar(String toCountIn, char toCount) {
+        int counter = 0;
+        for (int i = 0; i < toCountIn.length(); i++) {
+            if (toCountIn.charAt(i) == toCount) {
+                counter++;
+            }
+        }
+        return counter;
     }
 }

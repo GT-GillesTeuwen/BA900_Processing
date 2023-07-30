@@ -73,6 +73,18 @@ public class BA900Table {
         if (col == -1) {
             return "NO VALUE (Column not found)";
         }
+        if (col > records.get(row).length - 1) {
+            System.out.println(tableName + " " + record.toString());
+            System.out.println(
+                    "\tOOB col index found was " + col + " but there are only " + records.get(row).length + " columns");
+            System.out.print("\t" + "Cols are");
+            for (int i = 0; i < columns.length; i++) {
+                System.out.print(columns[i] + " ");
+            }
+            System.out.println("\n\tRecord 0 has " + records.get(0).length + " fields");
+            System.out.println();
+            return "NO VALUE (Column out of bounds)";
+        }
         return records.get(row)[col];
     }
 
