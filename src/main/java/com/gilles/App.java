@@ -1,6 +1,9 @@
 package com.gilles;
 
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -17,6 +20,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -59,11 +63,11 @@ public class App {
         ld.dispose();
         System.gc();
         JComboBox comboBox = new JComboBox<>(d.getAllRecords().keySet().toArray());
-        comboBox.setPreferredSize(new Dimension(350, 25));
+        // comboBox.setPreferredSize(new Dimension(350, 25));
 
         JFrame cont = new JFrame("Cont");
         cont.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        JPanel p = new JPanel();
+        JPanel p = new JPanel(new GridBagLayout());
         ArrayList<Integer> years = new ArrayList<>();
         for (int i = 1990; i < 2025; i++) {
             years.add(i);
@@ -74,8 +78,8 @@ public class App {
             months.add(i);
         }
         JComboBox month = new JComboBox<>(months.toArray());
-        year.setPreferredSize(new Dimension(100, 25));
-        month.setPreferredSize(new Dimension(100, 25));
+        year.setMaximumSize(new Dimension(100, 25));
+        // month.setPreferredSize(new Dimension(100, 25));
         JButton b = new JButton("Go");
         JTabbedPane tabs = new JTabbedPane();
         String[] cols = { "Table Name", "Row", "Col", "RowDesc", "ColName" };
@@ -83,27 +87,57 @@ public class App {
         JButton clearBtn = new JButton("Clear");
         JTextField csvName = new JTextField("");
         csvName.setPreferredSize(new Dimension(100, 25));
-        JCheckBox useRawColInt = new JCheckBox("Use Raw Col Int");
+        JCheckBox useRawColIntAndRawRowInt = new JCheckBox("Raw Indexes");
         JButton buildCSV = new JButton("Build CSV");
         tabPane = tabs;
-        p.add(comboBox);
-        p.add(year);
-        p.add(month);
-        p.add(b);
-        p.add(new JScrollPane(selectedCells));
-        p.add(clearBtn);
-        p.add(csvName);
-        p.add(useRawColInt);
-        p.add(buildCSV);
-        cont.add(p);
-        cont.setSize(300, 400);
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridwidth = 3;
+        p.add(comboBox, c);
+        c.gridwidth = 1;
+
+        c.gridx = 0;
+        c.gridy = 1;
+        p.add(year, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        p.add(month, c);
+
+        c.gridx = 2;
+        c.gridy = 1;
+        p.add(b, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        c.gridwidth = 3;
+        p.add(new JScrollPane(selectedCells), c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        p.add(clearBtn, c);
+        c.gridwidth = 1;
+
+        c.gridx = 0;
+        c.gridy = 4;
+        p.add(csvName, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        p.add(useRawColIntAndRawRowInt, c);
+
+        c.gridx = 2;
+        c.gridy = 4;
+        p.add(buildCSV, c);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                p, tabPane);
+        cont.add(splitPane);
         cont.setVisible(true);
-        JFrame frame = new JFrame("Data");
-        frame.setSize(300, 400);
-        frame.setVisible(true);
         b.addActionListener(e -> {
             try {
-                selectionButtonPressed(year, month, comboBox, d, frame, tabs, selectedCells);
+                selectionButtonPressed(year, month, comboBox, d, tabs, selectedCells);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
@@ -114,13 +148,12 @@ public class App {
         });
         buildCSV.addActionListener(e -> {
             try {
-                doSCV(csvName.getText(), d, selectedCells, useRawColInt);
+                doSCV(csvName.getText(), d, selectedCells, useRawColIntAndRawRowInt);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
         });
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     private static void clearSelectedCells(JTable selectedCells) {
@@ -137,7 +170,7 @@ public class App {
         columnNames.clear();
     }
 
-    private static void selectionButtonPressed(JComboBox y, JComboBox m, JComboBox c, DataStore d, JFrame frame,
+    private static void selectionButtonPressed(JComboBox y, JComboBox m, JComboBox c, DataStore d,
             JTabbedPane tabs, JTable selectedCells) throws IOException {
         System.gc();
         tabs.removeAll();
@@ -146,7 +179,6 @@ public class App {
         BA900Record record = bank
                 .get(YearMonth.of((Integer) (y.getSelectedItem()), (Integer) (m.getSelectedItem())));
 
-        frame.add(tabs);
         for (BA900Table tab : record.getTables().values()) {
             JTable jt = new JTable(tab.getRecordsAs2dArray(), tab.getColumns());
             jt.addMouseListener(new MouseAdapter() {
@@ -197,7 +229,8 @@ public class App {
                     BA900Table currentTable = currentRecord.getTables().get(tableNamesToFind.get(i));
                     int currentRow = rows.get(i);
                     int currentCol = cols.get(i);
-                    String subString = selectedCells.getValueAt(i, 4).toString();
+                    String rowSubString = selectedCells.getValueAt(i, 3).toString();
+                    String colSubString = selectedCells.getValueAt(i, 4).toString();
                     // System.out.println(subString);
                     if (currentTable == null) {
                         newRecordForCSV[i + 1] = "NO VALUE FOUND, Table did not exist";
@@ -206,8 +239,9 @@ public class App {
                             newRecordForCSV[i + 1] = currentTable.getValueBasedOnIndexLikeANormalPerson(currentRow,
                                     currentCol);
                         } else {
-                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnRowIndexAndColumnContains(currentRow,
-                                    subString);
+                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnDescriptionContainsAndColumnContains(
+                                    rowSubString,
+                                    colSubString);
                         }
 
                     }

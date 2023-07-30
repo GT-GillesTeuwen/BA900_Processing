@@ -97,6 +97,17 @@ public class BA900Record {
                     currentLineOfTheFile = currentLineOfTheFile.substring(0, currentLineOfTheFile.length() - 1);
                 }
             }
+            Reader in = new StringReader(currentLineOfTheFile);
+            for (CSVRecord row : CSVFormat.DEFAULT.parse(in)) {
+                try {
+                    currentTable.addRecord(row);
+                } catch (InvalidRecordException e) {
+                    // TODO Auto-generated catch block
+                    System.out.println(e.getMessage() + " in " + path);
+                    System.exit(1);
+                }
+            }
+            in.close();
         }
         file.close();
         return allTables;

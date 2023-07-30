@@ -1,6 +1,7 @@
 package com.gilles.DataClasses;
 
 import java.util.ArrayList;
+import java.util.zip.ZipEntry;
 
 import org.apache.commons.csv.CSVRecord;
 
@@ -81,7 +82,35 @@ public class BA900Table {
             for (int i = 0; i < columns.length; i++) {
                 System.out.print(columns[i] + " ");
             }
-            System.out.println("\n\tRecord 0 has " + records.get(0).length + " fields");
+            System.out.println("\n\tRecord 0 has " + records.get(row).length + " fields");
+            System.out.println();
+            return "NO VALUE (Column out of bounds)";
+        }
+        return records.get(row)[col];
+    }
+
+    // Assuming description is always in col 0
+    public String getValueBasedOnDescriptionContainsAndColumnContains(String rowSubString,
+            String colSubString) {
+        int row = getRowIndexOfFirstContains(rowSubString);
+        if (row == -1) {
+            System.out.println(
+                    tableName + " in " + record.toString() + " could not find a row containing " + rowSubString);
+            return "NO VALUE (Row not found)";
+        }
+        int col = getColIndexOfFirstContains(colSubString);
+        if (col == -1) {
+            return "NO VALUE (Column not found)";
+        }
+        if (col > records.get(row).length - 1) {
+            System.out.println(tableName + " " + record.toString());
+            System.out.println(
+                    "\tOOB col index found was " + col + " but there are only " + records.get(row).length + " columns");
+            System.out.print("\t" + "Cols are");
+            for (int i = 0; i < columns.length; i++) {
+                System.out.print(columns[i] + " ");
+            }
+            System.out.println("\n\tRecord 0 has " + records.get(row).length + " fields");
             System.out.println();
             return "NO VALUE (Column out of bounds)";
         }
@@ -91,6 +120,15 @@ public class BA900Table {
     private int getColIndexOfFirstContains(String subString) {
         for (int i = 0; i < columns.length; i++) {
             if (columns[i].contains(subString)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int getRowIndexOfFirstContains(String subString) {
+        for (int i = 0; i < records.size(); i++) {
+            if (records.get(i)[0].contains(subString)) {
                 return i;
             }
         }
@@ -115,6 +153,10 @@ public class BA900Table {
         String[] recordArr = new String[record.size()];
         for (int i = 0; i < record.size(); i++) {
             recordArr[i] = record.get(i);
+        }
+        recordArr[0] = recordArr[0].toLowerCase();
+        if (recordArr[0].startsWith("table ")) {
+            return;
         }
         records.add(recordArr);
     }
