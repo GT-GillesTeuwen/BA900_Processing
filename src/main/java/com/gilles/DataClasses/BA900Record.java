@@ -13,6 +13,9 @@ import java.util.Set;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.gilles.Exceptions.InvalidRecordException;
 
@@ -46,7 +49,7 @@ public class BA900Record {
         return recordDate;
     }
 
-    public HashMap<String, BA900Table> getTables() throws IOException {
+    public HashMap<String, BA900Table> getTables(JSONObject replacements) throws IOException {
         HashMap<String, BA900Table> allTables = new HashMap<>();
         Scanner file = new Scanner(new FileReader(path));
         String currentLineOfTheFile = "";
@@ -68,6 +71,37 @@ public class BA900Record {
             // Building the columns array
             String[] columns = headings.split(",");
 
+            for (int i = 0; i < columns.length; i++) {
+                columns[i] = columns[i].toLowerCase();
+            }
+            // Replace column names based on passed in map
+            // YearMonth-->Table-->Col-->newValue
+            try {
+                for (int i = 0; i < replacements.getJSONArray("YearMonths").length(); i++) {
+                    JSONObject yearMonth = replacements.getJSONArray("YearMonths").getJSONObject(i);
+                    if (yearMonth.getString("YearMonth").equals(recordDate.toString())) {
+                        // System.out.println("FOUND YEAR");
+                        for (int j = 0; j < yearMonth.getJSONArray("tables").length(); j++) {
+                            JSONObject table = yearMonth.getJSONArray("tables").getJSONObject(j);
+                            if (table.getString("table").equals(tableName)) {
+                                // System.out.println("\tFOUND TABLE");
+                                for (int k = 0; k < table.getJSONArray("columns").length(); k++) {
+                                    for (int l = 0; l < columns.length; l++) {
+                                        if (columns[l].equals(table.getJSONArray("columns").getJSONObject(k)
+                                                .getString("columnName"))) {
+                                            // System.out.println("\t\tFOUND COL: " + columns[l]);
+                                            columns[l] = table.getJSONArray("columns").getJSONObject(k)
+                                                    .getString("newValue");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (JSONException e) {
+                System.out.println(e);
+            }
             // Get first line after headings
             currentLineOfTheFile = file.nextLine();
             if (currentLineOfTheFile.charAt(currentLineOfTheFile.length() - 1) == ','

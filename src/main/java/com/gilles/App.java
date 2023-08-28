@@ -7,11 +7,14 @@ import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -26,6 +29,8 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import javax.xml.crypto.Data;
+
+import org.json.JSONObject;
 
 import com.gilles.Core.DataStore;
 import com.gilles.DataClasses.BA900Record;
@@ -170,6 +175,25 @@ public class App {
         columnNames.clear();
     }
 
+    public static JSONObject getConfig() {
+        Scanner file;
+        String json = "";
+        try {
+            file = new Scanner(new FileReader("config/renameCols.conf"));
+
+            while (file.hasNext()) {
+                json += file.nextLine();
+            }
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            System.out.println("no config found");
+            return new JSONObject("{}");
+        }
+
+        return new JSONObject(json);
+    }
+
     private static void selectionButtonPressed(JComboBox y, JComboBox m, JComboBox c, DataStore d,
             JTabbedPane tabs, JTable selectedCells) throws IOException {
         System.gc();
@@ -179,7 +203,7 @@ public class App {
         BA900Record record = bank
                 .get(YearMonth.of((Integer) (y.getSelectedItem()), (Integer) (m.getSelectedItem())));
 
-        for (BA900Table tab : record.getTables().values()) {
+        for (BA900Table tab : record.getTables(getConfig()).values()) {
             JTable jt = new JTable(tab.getRecordsAs2dArray(), tab.getColumns());
             jt.addMouseListener(new MouseAdapter() {
                 public void mouseClicked(MouseEvent e) {
@@ -226,7 +250,7 @@ public class App {
                 String[] newRecordForCSV = new String[csvColumns.size()];
                 newRecordForCSV[0] = yearMonth.toString();
                 for (int i = 0; i < tableNamesToFind.size(); i++) {
-                    BA900Table currentTable = currentRecord.getTables().get(tableNamesToFind.get(i));
+                    BA900Table currentTable = currentRecord.getTables(getConfig()).get(tableNamesToFind.get(i));
                     int currentRow = rows.get(i);
                     int currentCol = cols.get(i);
                     String rowSubString = selectedCells.getValueAt(i, 3).toString();
