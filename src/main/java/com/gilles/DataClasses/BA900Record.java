@@ -73,6 +73,7 @@ public class BA900Record {
 
             for (int i = 0; i < columns.length; i++) {
                 columns[i] = columns[i].toLowerCase();
+                columns[i] = columns[i].replaceAll("\"", "");
             }
             // Replace column names based on passed in map
             // YearMonth-->Table-->Col-->newValue
@@ -86,7 +87,14 @@ public class BA900Record {
                             if (table.getString("table").equals(tableName)) {
                                 // System.out.println("\tFOUND TABLE");
                                 for (int k = 0; k < table.getJSONArray("columns").length(); k++) {
+
                                     for (int l = 0; l < columns.length; l++) {
+                                        // System.out.println(columns[l] + " ?= "
+                                        // + table.getJSONArray("columns").getJSONObject(k)
+                                        // .getString("columnName")
+                                        // + ":"
+                                        // + columns[l].equals(table.getJSONArray("columns").getJSONObject(k)
+                                        // .getString("columnName")));
                                         if (columns[l].equals(table.getJSONArray("columns").getJSONObject(k)
                                                 .getString("columnName"))) {
                                             // System.out.println("\t\tFOUND COL: " + columns[l]);
@@ -100,6 +108,7 @@ public class BA900Record {
                     }
                 }
             } catch (JSONException e) {
+                System.out.println("AHHHHHHHHHH!!!!!!!");
                 System.out.println(e);
             }
             // Get first line after headings

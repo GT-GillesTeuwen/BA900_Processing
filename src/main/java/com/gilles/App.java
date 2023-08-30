@@ -14,7 +14,10 @@ import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -30,6 +33,7 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import javax.xml.crypto.Data;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.gilles.Core.DataStore;
@@ -233,46 +237,77 @@ public class App {
 
     private static void doSCV(String tableName, DataStore d, JTable selectedCells, JCheckBox rawCol)
             throws IOException {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors
+                .newFixedThreadPool(Runtime.getRuntime().availableProcessors() - 1);
+        JSONObject conf = getConfig();
+        HashSet<String> banks = new HashSet<>();
+        JSONArray bankJson = conf.getJSONArray("Banks");
+        for (int i = 0; i < bankJson.length(); i++) {
+            banks.add(bankJson.getString(i));
+        }
         for (String bankName : d.getAllRecords().keySet()) {
-            ArrayList<String> csvColumns = new ArrayList<>();
-            csvColumns.add("year-month");
-            for (int i = 0; i < cols.size(); i++) {
-                csvColumns.add(descriptions.get(i) + "-" + columnNames.get(i));
-            }
-            CSVWriter writer = new CSVWriter(csvColumns);
-            HashMap<YearMonth, BA900Record> currentBank = d.getAllRecords().get(bankName);
-            for (YearMonth yearMonth : currentBank.keySet()) {
-                if (yearMonth == null) {
-                    break;
-                }
-
-                BA900Record currentRecord = currentBank.get(yearMonth);
-                String[] newRecordForCSV = new String[csvColumns.size()];
-                newRecordForCSV[0] = yearMonth.toString();
-                for (int i = 0; i < tableNamesToFind.size(); i++) {
-                    BA900Table currentTable = currentRecord.getTables(getConfig()).get(tableNamesToFind.get(i));
-                    int currentRow = rows.get(i);
-                    int currentCol = cols.get(i);
-                    String rowSubString = selectedCells.getValueAt(i, 3).toString();
-                    String colSubString = selectedCells.getValueAt(i, 4).toString();
-                    // System.out.println(subString);
-                    if (currentTable == null) {
-                        newRecordForCSV[i + 1] = "NO VALUE FOUND, Table did not exist";
-                    } else {
-                        if (rawCol.isSelected()) {
-                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnIndexLikeANormalPerson(currentRow,
-                                    currentCol);
-                        } else {
-                            newRecordForCSV[i + 1] = currentTable.getValueBasedOnDescriptionContainsAndColumnContains(
-                                    rowSubString,
-                                    colSubString);
+            if (banks.contains(bankName)) {
+                System.out.println("DOING " + bankName);
+                executor.submit(() -> {
+                    ArrayList<String> csvColumns = new ArrayList<>();
+                    csvColumns.add("year-month");
+                    for (int i = 0; i < cols.size(); i++) {
+                        csvColumns.add(descriptions.get(i) + "-" + columnNames.get(i));
+                        csvColumns.add("rawColheading_" + i);
+                    }
+                    CSVWriter writer = new CSVWriter(csvColumns);
+                    HashMap<YearMonth, BA900Record> currentBank = d.getAllRecords().get(bankName);
+                    for (YearMonth yearMonth : currentBank.keySet()) {
+                        if (yearMonth == null) {
+                            break;
                         }
 
+                        BA900Record currentRecord = currentBank.get(yearMonth);
+                        String[] newRecordForCSV = new String[csvColumns.size()];
+                        newRecordForCSV[0] = yearMonth.toString();
+                        for (int i = 0; i < tableNamesToFind.size(); i++) {
+                            BA900Table currentTable = null;
+                            try {
+                                currentTable = currentRecord.getTables(getConfig()).get(tableNamesToFind.get(i));
+                            } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
+                            int currentRow = rows.get(i);
+                            int currentCol = cols.get(i);
+                            String rowSubString = selectedCells.getValueAt(i, 3).toString();
+                            String colSubString = selectedCells.getValueAt(i, 4).toString();
+                            // System.out.println(subString);
+                            if (currentTable == null) {
+                                newRecordForCSV[(2 * (i + 1)) - 1] = "NO VALUE FOUND, Table did not exist";
+                                newRecordForCSV[2 * (i + 1)] = "NO VALUE FOUND, Table did not exist";
+                            } else {
+                                if (rawCol.isSelected()) {
+                                    String res = currentTable.getValueBasedOnIndexLikeANormalPerson(
+                                            currentRow,
+                                            currentCol);
+                                    newRecordForCSV[(2 * (i + 1)) - 1] = res;
+                                } else {
+                                    String res = currentTable
+                                            .getValueBasedOnDescriptionContainsAndColumnContains(
+                                                    rowSubString,
+                                                    colSubString);
+                                    newRecordForCSV[(2 * (i + 1)) - 1] = res.split("~")[0];
+                                    newRecordForCSV[(2 * (i + 1))] = res.split("~")[1];
+                                }
+
+                            }
+                        }
+                        writer.addRecord(newRecordForCSV);
                     }
-                }
-                writer.addRecord(newRecordForCSV);
+                    try {
+                        writer.write(bankName + "/" + bankName + "-" + tableName);
+                    } catch (IOException e) {
+                        System.out.println("a");
+                        e.printStackTrace();
+                    }
+                });
             }
-            writer.write(bankName + "/" + bankName + "-" + tableName);
         }
     }
 

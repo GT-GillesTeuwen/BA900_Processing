@@ -98,7 +98,7 @@ public class BA900Table {
                     tableName + " in " + record.toString() + " could not find a row containing " + rowSubString);
             return "NO VALUE (Row not found)";
         }
-        int col = getColIndexOfFirstContains(colSubString);
+        int col = getColIndexOfLastContains(colSubString);
         if (col == -1) {
             return "NO VALUE (Column not found)";
         }
@@ -114,11 +114,20 @@ public class BA900Table {
             System.out.println();
             return "NO VALUE (Column out of bounds)";
         }
-        return records.get(row)[col];
+        return records.get(row)[col] + "~[" + columns[col] + "]";
     }
 
     private int getColIndexOfFirstContains(String subString) {
         for (int i = 0; i < columns.length; i++) {
+            if (columns[i].contains(subString)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int getColIndexOfLastContains(String subString) {
+        for (int i = columns.length - 1; i >= 0; i--) {
             if (columns[i].contains(subString)) {
                 return i;
             }
