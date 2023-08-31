@@ -46,6 +46,7 @@ public class CSVWriter {
             }
             writer.write(out);
             writer.flush();
+            writer.close();
 
         } catch (IOException e) {
             e.printStackTrace();

@@ -23,12 +23,14 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import javax.xml.crypto.Data;
@@ -54,6 +56,8 @@ public class App {
     static ArrayList<Integer> cols;
     static ArrayList<String> descriptions;
     static ArrayList<String> columnNames;
+    static JTable selectedCells;
+    static JTextArea pasteArea;
 
     public static void main(String[] args) {
         tableNamesToFind = new ArrayList<>();
@@ -92,13 +96,15 @@ public class App {
         JButton b = new JButton("Go");
         JTabbedPane tabs = new JTabbedPane();
         String[] cols = { "Table Name", "Row", "Col", "RowDesc", "ColName" };
-        JTable selectedCells = new JTable(new DefaultTableModel(cols, 0));
+        selectedCells = new JTable(new DefaultTableModel(cols, 0));
         JButton clearBtn = new JButton("Clear");
         JTextField csvName = new JTextField("");
         csvName.setPreferredSize(new Dimension(100, 25));
         JCheckBox useRawColIntAndRawRowInt = new JCheckBox("Raw Indexes");
         JButton buildCSV = new JButton("Build CSV");
+        JButton buildCSVFromText = new JButton("Build from text");
         tabPane = tabs;
+        pasteArea = new JTextArea("paste here");
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridx = 0;
@@ -140,6 +146,21 @@ public class App {
         c.gridx = 2;
         c.gridy = 4;
         p.add(buildCSV, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        c.gridwidth = 3;
+        p.add(new JLabel("Paste pre-built searches here"), c);
+        c.gridx = 0;
+        c.gridy = 6;
+        c.gridwidth = 3;
+        JScrollPane sp = new JScrollPane(pasteArea);
+        sp.setPreferredSize(new Dimension(100, 100));
+        p.add(sp, c);
+
+        c.gridx = 0;
+        c.gridy = 7;
+        p.add(buildCSVFromText, c);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 p, tabPane);
         cont.add(splitPane);
@@ -157,7 +178,19 @@ public class App {
         });
         buildCSV.addActionListener(e -> {
             try {
+
                 doSCV(csvName.getText(), d, selectedCells, useRawColIntAndRawRowInt);
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+        });
+
+        buildCSVFromText.addActionListener(e -> {
+            try {
+                addFromTextArea();
+
+                doSCVFromPasted(csvName.getText(), d, useRawColIntAndRawRowInt);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
@@ -198,6 +231,20 @@ public class App {
         return new JSONObject(json);
     }
 
+    private static void addFromTextArea() {
+        clearSelectedCells(selectedCells);
+        String prebuiltSearch = pasteArea.getText();
+        String[] lines = prebuiltSearch.split("\n");
+        for (String string : lines) {
+            String[] split = string.split(";");
+            tableNamesToFind.add(split[0]);
+            rows.add(Integer.parseInt(split[1]));
+            cols.add(Integer.parseInt(split[2]));
+            descriptions.add(split[3]);
+            columnNames.add(split[4]);
+        }
+    }
+
     private static void selectionButtonPressed(JComboBox y, JComboBox m, JComboBox c, DataStore d,
             JTabbedPane tabs, JTable selectedCells) throws IOException {
         System.gc();
@@ -232,6 +279,83 @@ public class App {
             BA900TablePane sp = new BA900TablePane(jt, jt);
             tabs.add(tab.getTableName(), sp);
 
+        }
+    }
+
+    private static void doSCVFromPasted(String tableName, DataStore d, JCheckBox rawCol)
+            throws IOException {
+        System.out.println("FROM pasted");
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors
+                .newFixedThreadPool(Runtime.getRuntime().availableProcessors() - 1);
+        JSONObject conf = getConfig();
+        HashSet<String> banks = new HashSet<>();
+        JSONArray bankJson = conf.getJSONArray("Banks");
+        for (int i = 0; i < bankJson.length(); i++) {
+            banks.add(bankJson.getString(i));
+        }
+        for (String bankName : d.getAllRecords().keySet()) {
+            if (banks.contains(bankName)) {
+                System.out.println("DOING " + bankName);
+                executor.submit(() -> {
+                    ArrayList<String> csvColumns = new ArrayList<>();
+                    csvColumns.add("year-month");
+                    for (int i = 0; i < cols.size(); i++) {
+                        csvColumns.add(descriptions.get(i) + "-" + columnNames.get(i));
+                        csvColumns.add("rawColheading_" + i);
+                    }
+                    CSVWriter writer = new CSVWriter(csvColumns);
+                    HashMap<YearMonth, BA900Record> currentBank = d.getAllRecords().get(bankName);
+                    for (YearMonth yearMonth : currentBank.keySet()) {
+                        if (yearMonth == null) {
+                            break;
+                        }
+
+                        BA900Record currentRecord = currentBank.get(yearMonth);
+                        String[] newRecordForCSV = new String[csvColumns.size()];
+                        newRecordForCSV[0] = yearMonth.toString();
+                        for (int i = 0; i < tableNamesToFind.size(); i++) {
+                            BA900Table currentTable = null;
+                            try {
+                                currentTable = currentRecord.getTables(getConfig()).get(tableNamesToFind.get(i));
+                            } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
+                            int currentRow = rows.get(i);
+                            int currentCol = cols.get(i);
+                            String rowSubString = descriptions.get(i);
+                            String colSubString = columnNames.get(i);
+                            // System.out.println(subString);
+                            if (currentTable == null) {
+                                newRecordForCSV[(2 * (i + 1)) - 1] = "NO VALUE FOUND, Table did not exist";
+                                newRecordForCSV[2 * (i + 1)] = "NO VALUE FOUND, Table did not exist";
+                            } else {
+                                if (rawCol.isSelected()) {
+                                    String res = currentTable.getValueBasedOnIndexLikeANormalPerson(
+                                            currentRow,
+                                            currentCol);
+                                    newRecordForCSV[(2 * (i + 1)) - 1] = res;
+                                } else {
+                                    String res = currentTable
+                                            .getValueBasedOnDescriptionContainsAndColumnContains(
+                                                    rowSubString,
+                                                    colSubString);
+                                    newRecordForCSV[(2 * (i + 1)) - 1] = res.split("~")[0];
+                                    newRecordForCSV[(2 * (i + 1))] = res.split("~")[1];
+                                }
+
+                            }
+                        }
+                        writer.addRecord(newRecordForCSV);
+                    }
+                    try {
+                        writer.write(bankName + "/" + bankName + "-" + tableName);
+                    } catch (IOException e) {
+                        System.out.println("a");
+                        e.printStackTrace();
+                    }
+                });
+            }
         }
     }
 

@@ -3,6 +3,8 @@ package com.gilles.DataClasses;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 
+import javax.swing.JOptionPane;
+
 import org.apache.commons.csv.CSVRecord;
 
 import com.gilles.Exceptions.InvalidRecordException;
@@ -93,14 +95,18 @@ public class BA900Table {
     public String getValueBasedOnDescriptionContainsAndColumnContains(String rowSubString,
             String colSubString) {
         int row = getRowIndexOfFirstContains(rowSubString);
+        String retCol = "[!COL NOT FOUND!]";
         if (row == -1) {
+            JOptionPane.showMessageDialog(null,
+                    tableName + " in " + record.toString() + " could not find a row containing " + rowSubString,
+                    "Error", JOptionPane.ERROR_MESSAGE);
             System.out.println(
                     tableName + " in " + record.toString() + " could not find a row containing " + rowSubString);
-            return "NO VALUE (Row not found)";
+            return "NO VALUE (Row not found)~" + retCol;
         }
         int col = getColIndexOfLastContains(colSubString);
         if (col == -1) {
-            return "NO VALUE (Column not found)";
+            return "NO VALUE (Column not found)~" + retCol;
         }
         if (col > records.get(row).length - 1) {
             System.out.println(tableName + " " + record.toString());
@@ -110,9 +116,9 @@ public class BA900Table {
             for (int i = 0; i < columns.length; i++) {
                 System.out.print(columns[i] + " ");
             }
-            System.out.println("\n\tRecord 0 has " + records.get(row).length + " fields");
+            System.out.println("\n\tRecord 0 has " + records.get(0).length + " fields");
             System.out.println();
-            return "NO VALUE (Column out of bounds)";
+            return "NO VALUE (Column out of bounds)~" + retCol;
         }
         return records.get(row)[col] + "~[" + columns[col] + "]";
     }
